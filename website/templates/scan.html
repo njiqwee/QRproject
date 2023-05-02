@@ -1,0 +1,38 @@
+{% extends "base.html" %} {% block title %}QR scan{% endblock %} {% block content
+%}
+<h3>Scan</h3>
+    <div id="qr-reader" style="width:500px"></div>
+    <div hidden="hidden" id="qr-reader-results"></div>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    var resultContainer = document.getElementById('qr-reader-results');
+    var lastResult, countResults = 0;
+
+    function onScanSuccess(decodedText, decodedResult) {
+        if (decodedText !== lastResult) {
+            ++countResults;
+            lastResult = decodedText;
+            console.log(`Scan result ${decodedText}`, decodedResult);
+            fetch('/QRtoDB', {
+                method: 'POST',
+                body: JSON.stringify({ text: decodedText }),
+                headers: {
+                'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json()).
+            then(data => {
+				location.reload();
+            })
+            .catch(error => {
+                console.error('Error sending data to server:', error);
+            });
+            resultContainer.innerHTML = decodedText;
+        }
+    }
+
+    var html5QrcodeScanner = new Html5QrcodeScanner(
+        "qr-reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
+</script>
+{% endblock %}

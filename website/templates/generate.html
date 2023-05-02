@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}genQR{% endblock %}
+{% block content %}
+  <body class="state-loading">
+    <header>
+      <h1>QR code generator</h1>
+    </header>
+    <main>
+      <section>
+      </section>
+      <section id="qr-code">
+      </section>
+      <section id="tools">
+        <label hidden="hidden">User ID: <input id="user-id" type="text" value="{{ idtoqr }}"></label>
+        <label>Radius: <input id="radius" type="range" value="0" step="0.025" min="0" max="0.5"></label>
+        <label>Error correction:
+        <select id="ecLevel">
+          <option value="L" label="Low, 7%">
+          <option value="M" label="Medium, 15%">
+          <option value="Q" label="Quarter, 25%">
+          <option value="H" label="High, 30%" selected>
+        </select></label>
+        <label>Color: <input id="fill" type="color" value="#0064a8"></label>
+        <label>Background: <input id="background" type="color"><input id="transparent" type="checkbox" checked> transparent</label>
+        <label>Size: <input id="size" type="range" value="450" step="10" min="20" max="1000"></label>
+      </section>
+    </main>
+    <script type="module">
+      import QrCreator from 'https://cdn.jsdelivr.net/npm/qr-creator/dist/qr-creator.es6.min.js';
+      let availableSettings = ['user-id', 'radius', 'ecLevel', 'fill', 'background', 'size'];
+
+      function readSettings() {
+        let settings = {}, el;
+        for (let setting of availableSettings) {
+          settings[setting] = document.querySelector('#'+setting).value;
+        }
+        if (document.querySelector('#transparent').checked) {
+          settings.background = null;
+        }
+        return settings;
+      }
+
+      function renderQrCode() {
+        let container = document.querySelector('#qr-code'),
+            settings = readSettings();
+        let text = settings['user-id'] + '-' + generateRandomNumber();
+        fetch('/genQR', {
+                method: 'POST',
+                body: JSON.stringify({ text: text }),
+                headers: {
+                'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('Response from server:', response);
+            })
+            .catch(error => {
+                console.error('Error sending data to server:', error);
+            });
+        container.innerHTML = '';
+        QrCreator.render({ ...settings, text: text }, container);
+        document.querySelector('#json').innerText = JSON.stringify(settings, null, 2);
+      }
+
+      function generateRandomNumber() {
+        let randomNumber = Math.floor(Math.random() * 90000000) + 10000000; // Generate a random 8-digit number
+        return randomNumber;
+      }
+
+      setInterval(renderQrCode, 3000); // Refresh the QR code every 10 seconds
+      for (let input of document.querySelectorAll('input, select')) {
+        input.addEventListener('change', renderQrCode);
+      }
+      renderQrCode();
+
+    </script>
+  </body>
+{% endblock %}
